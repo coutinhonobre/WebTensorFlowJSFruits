@@ -6,6 +6,11 @@
     <title>Object Detection App</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <style>
+      h1 {
+        color: red;
+      }
+      </style>
   </head>
   <body>
     <h1>Object Detection</h1>
@@ -14,50 +19,66 @@
 
     <script>
       async function runObjectDetection() {
-        const video = document.getElementById("video");
-        const canvas = document.getElementById("canvas");
-        const context = canvas.getContext("2d");
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  const context = canvas.getContext("2d");
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter((device) => device.kind === 'videoinput');
 
-        video.srcObject = stream;
+    if (videoDevices.length > 0) {
+      const selectedDeviceId = videoDevices[0].deviceId; // Escolhe a primeira câmera como padrão
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: selectedDeviceId } }
+      });
 
-        const objectModel = await cocoSsd.load();
-        
-        video.addEventListener("loadeddata", async () => {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
+      video.srcObject = stream;
 
-          async function detectObjects() {
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const predictions = await objectModel.detect(video);
+      const objectModel = await cocoSsd.load();
 
-            predictions.forEach(prediction => {
-              context.beginPath();
-              context.rect(
-                prediction.bbox[0],
-                prediction.bbox[1],
-                prediction.bbox[2],
-                prediction.bbox[3]
-              );
-              context.lineWidth = 2;
-              context.strokeStyle = "red";
-              context.fillStyle = "red";
-              context.stroke();
-              context.fillText(
-                `${prediction.class} (${Math.round(prediction.score * 100)}%)`,
-                prediction.bbox[0],
-                prediction.bbox[1] > 10 ? prediction.bbox[1] - 5 : 10
-              );
-            });
+      video.addEventListener("loadeddata", async () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
 
-            requestAnimationFrame(detectObjects);
-          }
+        async function detectObjects() {
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-          detectObjects();
-        });
-      }
+          const predictions = await objectModel.detect(video);
+
+          predictions.forEach((prediction) => {
+            context.beginPath();
+            context.rect(
+              prediction.bbox[0],
+              prediction.bbox[1],
+              prediction.bbox[2],
+              prediction.bbox[3]
+            );
+            context.lineWidth = 2;
+            context.strokeStyle = "red";
+            context.fillStyle = "red";
+            context.stroke();
+            context.fillText(
+              `${prediction.class} (${Math.round(prediction.score * 100)}%)`,
+              prediction.bbox[0],
+              prediction.bbox[1] > 10 ? prediction.bbox[1] - 5 : 10
+            );
+          });
+
+          requestAnimationFrame(detectObjects);
+        }
+
+        detectObjects();
+      });
+    } else {
+      console.error('Nenhuma câmera encontrada.');
+    }
+  } catch (error) {
+    console.error('Erro ao acessar a câmera:', error);
+  }
+}
+
+runObjectDetection();
 
       runObjectDetection();
     </script>
