@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Object Detection App</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+  </head>
+  <body>
+    <h1>Object Detection</h1>
+    <video id="video" autoplay></video>
+    <canvas id="canvas" width="500px" height="400px"></canvas>
+
+    <script>
+      async function runObjectDetection() {
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const context = canvas.getContext("2d");
+
+        const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+        video.srcObject = stream;
+
+        const objectModel = await cocoSsd.load();
+        
+        video.addEventListener("loadeddata", async () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+
+          async function detectObjects() {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const predictions = await objectModel.detect(video);
+
+            predictions.forEach(prediction => {
+              context.beginPath();
+              context.rect(
+                prediction.bbox[0],
+                prediction.bbox[1],
+                prediction.bbox[2],
+                prediction.bbox[3]
+              );
+              context.lineWidth = 2;
+              context.strokeStyle = "red";
+              context.fillStyle = "red";
+              context.stroke();
+              context.fillText(
+                `${prediction.class} (${Math.round(prediction.score * 100)}%)`,
+                prediction.bbox[0],
+                prediction.bbox[1] > 10 ? prediction.bbox[1] - 5 : 10
+              );
+            });
+
+            requestAnimationFrame(detectObjects);
+          }
+
+          detectObjects();
+        });
+      }
+
+      runObjectDetection();
+    </script>
+  </body>
+</html>
