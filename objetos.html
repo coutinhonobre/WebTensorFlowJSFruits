@@ -51,6 +51,18 @@
               cameraSelector.add(option);
             });
 
+            // Encontra a câmera traseira (back camera)
+            const backCamera = videoDevices.find(device => device.label.toLowerCase().includes('back'));
+
+            // Seleciona automaticamente a câmera traseira
+            const selectedDeviceId = backCamera ? backCamera.deviceId : videoDevices[0].deviceId;
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: { deviceId: { exact: selectedDeviceId } },
+            });
+
+            video.srcObject = stream;
+
             // Adiciona um ouvinte de evento para detectar mudanças na câmera selecionada
             cameraSelector.addEventListener("change", async () => {
               const selectedDeviceId = cameraSelector.value;
@@ -60,13 +72,6 @@
 
               video.srcObject = stream;
             });
-
-            const selectedDeviceId = videoDevices[0].deviceId;
-            const stream = await navigator.mediaDevices.getUserMedia({
-              video: { deviceId: { exact: selectedDeviceId } },
-            });
-
-            video.srcObject = stream;
 
             const objectModel = await cocoSsd.load();
 
