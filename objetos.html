@@ -22,6 +22,8 @@
   </head>
   <body>
     <h1>Object Detection</h1>
+    <label for="cameraSelector">Escolha a câmera:</label>
+    <select id="cameraSelector"></select>
     <h2 id="detectionResults">Detecção de objetos em tempo real</h2>
     <video id="video" autoplay></video>
     <canvas id="canvas" width="500px" height="400px"></canvas>
@@ -31,6 +33,7 @@
         const video = document.getElementById("video");
         const canvas = document.getElementById("canvas");
         const detectionResults = document.getElementById("detectionResults");
+        const cameraSelector = document.getElementById("cameraSelector");
         const context = canvas.getContext("2d");
 
         try {
@@ -40,7 +43,25 @@
           );
 
           if (videoDevices.length > 0) {
-            const selectedDeviceId = videoDevices[0].deviceId; // Escolhe a primeira câmera como padrão
+            // Preenche o menu suspenso com as opções de câmeras
+            videoDevices.forEach((device) => {
+              const option = document.createElement("option");
+              option.value = device.deviceId;
+              option.text = device.label || `Camera ${cameraSelector.length + 1}`;
+              cameraSelector.add(option);
+            });
+
+            // Adiciona um ouvinte de evento para detectar mudanças na câmera selecionada
+            cameraSelector.addEventListener("change", async () => {
+              const selectedDeviceId = cameraSelector.value;
+              const stream = await navigator.mediaDevices.getUserMedia({
+                video: { deviceId: { exact: selectedDeviceId } },
+              });
+
+              video.srcObject = stream;
+            });
+
+            const selectedDeviceId = videoDevices[0].deviceId;
             const stream = await navigator.mediaDevices.getUserMedia({
               video: { deviceId: { exact: selectedDeviceId } },
             });
@@ -58,7 +79,7 @@
 
                 const predictions = await objectModel.detect(video);
 
-                detectionResults.innerHTML = ""; // Limpa os resultados anteriores
+                detectionResults.innerHTML = "";
 
                 predictions.forEach((prediction) => {
                   context.beginPath();
@@ -80,7 +101,6 @@
                     prediction.bbox[1] > 10 ? prediction.bbox[1] - 5 : 10
                   );
 
-                  // Adiciona os resultados ao elemento <h2>
                   detectionResults.innerHTML += `${prediction.class} (${Math.round(
                     prediction.score * 100
                   )}%)<br>`;
