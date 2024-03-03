@@ -18,7 +18,8 @@
         const canvas = document.getElementById("canvas");
         const context = canvas.getContext("2d");
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+
         video.srcObject = stream;
 
         const objectModel = await cocoSsd.load();
