@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detecção de Frutas</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        img {
+            max-width: 50%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Detecção de Frutas</h1>
+    <input type="file" id="inputImage" accept="image/*">
+    <button onclick="detectFrutas()">Detectar Frutas</button>
+    <div id="output"></div>
+
+    <script>
+        async function detectFrutas() {
+            const inputElement = document.getElementById('inputImage');
+            const file = inputElement.files[0];
+
+            if (!file) {
+                alert('Selecione uma imagem.');
+                return;
+            }
+
+            const model = await tf.loadLayersModel('fruits_model_tfjs/model.json');
+            console.log('Modelo carregado:', model);
+
+            const imageElement = document.createElement('img');
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                imageElement.src = e.target.result;
+                document.body.appendChild(imageElement);
+            };
+
+            reader.readAsDataURL(file);
+
+            imageElement.onload = async function () {
+                // Redimensionamento da imagem para [150, 150]
+                const tensor = tf.browser.fromPixels(imageElement).resizeNearestNeighbor([150, 150]).toFloat();
+                const expandedTensor = tensor.expandDims(0);
+
+                // Pré-processamento da imagem
+                const preprocessedTensor = expandedTensor.div(255.0);
+
+                const predictions = model.predict(preprocessedTensor);
+                const classes = await predictions.argMax(-1).data();
+                const scores = await predictions.max(-1).data();
+
+                let outputHtml = '<p>Resultados:</p><ul>';
+                for (let i = 0; i < classes.length; i++) {
+                    outputHtml += `<li>Classe ${classes[i]}: Probabilidade ${(scores[i] * 100).toFixed(2)}%</li>`;
+                }
+                outputHtml += '</ul>';
+
+                document.getElementById('output').innerHTML = outputHtml;
+            };
+        }
+    </script>
+</body>
+</html>
