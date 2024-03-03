@@ -6,17 +6,46 @@
   <title>Webcam Example</title>
 </head>
 <body>
+  <select id="cameraSelector"></select>
   <video id="webcam" width="640" height="480" autoplay></video>
 
   <script>
-    // Check if the browser supports getUserMedia
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      // Access the webcam
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then(function (stream) {
-          // Get the video element
-          var video = document.getElementById('webcam');
+    // Get the video element
+    var video = document.getElementById('webcam');
+    
+    // Get the dropdown element
+    var cameraSelector = document.getElementById('cameraSelector');
 
+    // Check if the browser supports navigator.mediaDevices.enumerateDevices
+    if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      // Enumerate the media devices
+      navigator.mediaDevices.enumerateDevices()
+        .then(function(devices) {
+          devices.forEach(function(device) {
+            // Check if the device is a video input (camera)
+            if (device.kind === 'videoinput') {
+              // Create an option element for each camera and add it to the dropdown
+              var option = document.createElement('option');
+              option.value = device.deviceId;
+              option.text = device.label || 'Camera ' + (cameraSelector.length + 1);
+              cameraSelector.add(option);
+            }
+          });
+        })
+        .catch(function (error) {
+          console.error('Error enumerating devices:', error);
+        });
+    } else {
+      console.error('navigator.mediaDevices.enumerateDevices is not supported in this browser');
+    }
+
+    // Function to start the selected camera
+    function startCamera() {
+      var selectedCameraId = cameraSelector.value;
+
+      // Access the selected camera
+      navigator.mediaDevices.getUserMedia({ video: { deviceId: selectedCameraId } })
+        .then(function (stream) {
           // Set the video stream as the source of the video element
           video.srcObject = stream;
 
@@ -26,9 +55,13 @@
         .catch(function (error) {
           console.error('Error accessing the webcam:', error);
         });
-    } else {
-      console.error('getUserMedia is not supported in this browser');
     }
+
+    // Event listener for the cameraSelector change event
+    cameraSelector.addEventListener('change', startCamera);
+
+    // Initial call to startCamera to use the default camera
+    startCamera();
   </script>
 </body>
 </html>

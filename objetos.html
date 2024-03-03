@@ -18,75 +18,86 @@
         max-width: 50%;
         height: auto;
       }
-      </style>
+    </style>
   </head>
   <body>
     <h1>Object Detection</h1>
+    <h2 id="detectionResults">Detecção de objetos em tempo real</h2>
     <video id="video" autoplay></video>
     <canvas id="canvas" width="500px" height="400px"></canvas>
 
     <script>
       async function runObjectDetection() {
-  const video = document.getElementById("video");
-  const canvas = document.getElementById("canvas");
-  const context = canvas.getContext("2d");
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const detectionResults = document.getElementById("detectionResults");
+        const context = canvas.getContext("2d");
 
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter((device) => device.kind === 'videoinput');
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevices = devices.filter(
+            (device) => device.kind === "videoinput"
+          );
 
-    if (videoDevices.length > 0) {
-      const selectedDeviceId = videoDevices[0].deviceId; // Escolhe a primeira câmera como padrão
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: selectedDeviceId } }
-      });
+          if (videoDevices.length > 0) {
+            const selectedDeviceId = videoDevices[0].deviceId; // Escolhe a primeira câmera como padrão
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: { deviceId: { exact: selectedDeviceId } },
+            });
 
-      video.srcObject = stream;
+            video.srcObject = stream;
 
-      const objectModel = await cocoSsd.load();
+            const objectModel = await cocoSsd.load();
 
-      video.addEventListener("loadeddata", async () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+            video.addEventListener("loadeddata", async () => {
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
 
-        async function detectObjects() {
-          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+              async function detectObjects() {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-          const predictions = await objectModel.detect(video);
+                const predictions = await objectModel.detect(video);
 
-          predictions.forEach((prediction) => {
-            context.beginPath();
-            context.rect(
-              prediction.bbox[0],
-              prediction.bbox[1],
-              prediction.bbox[2],
-              prediction.bbox[3]
-            );
-            context.lineWidth = 2;
-            context.strokeStyle = "red";
-            context.fillStyle = "red";
-            context.stroke();
-            context.fillText(
-              `${prediction.class} (${Math.round(prediction.score * 100)}%)`,
-              prediction.bbox[0],
-              prediction.bbox[1] > 10 ? prediction.bbox[1] - 5 : 10
-            );
-          });
+                detectionResults.innerHTML = ""; // Limpa os resultados anteriores
 
-          requestAnimationFrame(detectObjects);
+                predictions.forEach((prediction) => {
+                  context.beginPath();
+                  context.rect(
+                    prediction.bbox[0],
+                    prediction.bbox[1],
+                    prediction.bbox[2],
+                    prediction.bbox[3]
+                  );
+                  context.lineWidth = 2;
+                  context.strokeStyle = "red";
+                  context.fillStyle = "red";
+                  context.stroke();
+                  context.fillText(
+                    `${prediction.class} (${Math.round(
+                      prediction.score * 100
+                    )}%)`,
+                    prediction.bbox[0],
+                    prediction.bbox[1] > 10 ? prediction.bbox[1] - 5 : 10
+                  );
+
+                  // Adiciona os resultados ao elemento <h2>
+                  detectionResults.innerHTML += `${prediction.class} (${Math.round(
+                    prediction.score * 100
+                  )}%)<br>`;
+                });
+
+                requestAnimationFrame(detectObjects);
+              }
+
+              detectObjects();
+            });
+          } else {
+            console.error("Nenhuma câmera encontrada.");
+          }
+        } catch (error) {
+          console.error("Erro ao acessar a câmera:", error);
         }
-
-        detectObjects();
-      });
-    } else {
-      console.error('Nenhuma câmera encontrada.');
-    }
-  } catch (error) {
-    console.error('Erro ao acessar a câmera:', error);
-  }
-}
-
-runObjectDetection();
+      }
 
       runObjectDetection();
     </script>
